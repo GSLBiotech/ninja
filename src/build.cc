@@ -88,7 +88,7 @@ BuildStatus::BuildStatus(const BuildConfig& config)
 
   progress_status_format_ = getenv("NINJA_STATUS");
   if (!progress_status_format_)
-    progress_status_format_ = "[%f/%t] ";
+    progress_status_format_ = "[%f/%t%h] ";
 }
 
 void BuildStatus::PlanHasTotalEdges(int total) {
@@ -273,6 +273,28 @@ string BuildStatus::FormatProgressStatus(
       case 'e': {
         double elapsed = overall_rate_.Elapsed();
         snprintf(buf, sizeof(buf), "%.3f", elapsed);
+        out += buf;
+        break;
+      }
+
+      case 'h': {
+        double ratio_finished = double(finished_edges_) / total_edges_;
+        if (overall_rate_.Elapsed() < 1.0 || ratio_finished < 0.01) {
+          buf[0] = 0;
+        } else {
+          double time_remaining =
+              (1.0 / ratio_finished - 1) * overall_rate_.Elapsed();
+          int hours = int(time_remaining) / 3600;
+          int minutes = (int(time_remaining) % 3600) / 60;
+          int seconds = int(time_remaining) % 60;
+          if (hours > 0) {
+            snprintf(buf, sizeof(buf), " %dh %dm", hours, minutes);
+          } else if (minutes > 0) {
+            snprintf(buf, sizeof(buf), " %dm %ds", minutes, seconds);
+          } else {
+            snprintf(buf, sizeof(buf), " %ds", seconds);
+          }
+        }
         out += buf;
         break;
       }
